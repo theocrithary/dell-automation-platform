@@ -6,7 +6,7 @@
 
 ## Features
 - Both scripts are idempodent and can be ran multiple times until all components have passed successfully
-- Exception: the final ./install-upgrade.sh script provided by the Dell Automation Platform install bundle cannot run parallel exceutions and must complete before re-running.
+- Exception: the final ./install-upgrade.sh script provided by the Dell Automation Platform install bundle cannot run parallel executions and must complete before re-running.
 
 ## DNS Entries required
 - host.domain (used for k8s API and primary host DNS)
