@@ -1,5 +1,5 @@
 ## Purpose
-This repo has two scripts that automate the full setup of a single-node Kubernetes cluster on a Ubuntu 24.04 server using kubeadm and then installs the Dell Automation Platform specific packages and run the install script.
+This repo has two scripts that automate the full setup of a single-node Kubernetes cluster on a Ubuntu 24.04 server using kubeadm and then installs the Dell Automation Platform specific packages and runs the install script.
 
 ## Testing & development
 - These scripts were tested on Ubuntu 24.04 LTS
