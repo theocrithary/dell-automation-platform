@@ -34,6 +34,9 @@ fi
 
 API_HOST="dap.lab.local"
 QUAY_SERVER="quay.lab.local"
+DAP_INSTALL_FILENAME="DellAutomationPlatform_v1.1.0.0.zip"
+DAP_BUNDLE_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip"
+DAP_SIGNED_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip.signed.bin"
 
 # ================================
 # Parse registry credentials

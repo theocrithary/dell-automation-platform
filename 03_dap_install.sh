@@ -39,9 +39,6 @@ FIRST_NAME="Theo"
 LAST_NAME="C"
 DAPO_USERNAME="administrator"
 DAPO_EMAIL="administrator@lab.local"
-DAP_INSTALL_FILENAME="DellAutomationPlatform_v1.1.0.0.zip"
-DAP_BUNDLE_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip"
-DAP_SIGNED_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip.signed.bin"
 
 # ================================
 # Parse registry credentials
