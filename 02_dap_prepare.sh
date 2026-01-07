@@ -333,5 +333,6 @@ fi
 echo "Logging in to Quay registry as $QUAY_USER..."
 docker login https://$QUAY_SERVER:443 --username "$QUAY_USER" --password "$QUAY_PASSWORD"
 
-echo "--> Now ready for DAP installation ..."
+echo "--> If all steps completed successfully, you are now ready for DAP installation ..."
+echo "--> If any step failed, re-run the script to ensure all steps completed successfully."
 echo "--> Proceed to step 3 and run the 03_dap_install.sh script to install Dell Automation Platform."
