@@ -43,6 +43,9 @@ FIRST_NAME="Theo"
 LAST_NAME="C"
 DAPO_USERNAME="administrator"
 DAPO_EMAIL="administrator@lab.local"
+DAP_INSTALL_FILENAME="DellAutomationPlatform_v1.1.0.0.zip"
+DAP_BUNDLE_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip"
+DAP_SIGNED_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip.signed.bin"
 
 # ================================
 # Parse Docker Hub credentials (required to avoid unauthenticated pull rate limits)
@@ -269,16 +272,17 @@ if [ -f ./install-upgrade.sh ]; then
 else
     echo "--> ❌ Error: DAP installation script not found at ./install-upgrade.sh. Proceeding with unpacking..."
     echo "--> Unpacking Dell Automation Platform bundle file..."
-    if [ -f ./DellAutomationPlatform_v1.0.0.0.zip ]; then
+    if [ -f ./$DAP_INSTALL_FILENAME ]; then
         echo "--> ✅ Success: Found DAP bundle file."
-        if [ -f ./DellAutomationPlatform_v1.0.0.0-801f656.zip ]; then
-            echo "--> ✅ Success: File ./DellAutomationPlatform_v1.0.0.0-801f656.zip found."
+        if [ -f ./$DAP_BUNDLE_FILENAME ]; then
+            echo "--> ✅ Success: File ./$DAP_BUNDLE_FILENAME found."
         else
-            echo "--> ❌ Error: DAP installation zip file not found at ./DellAutomationPlatform_v1.0.0.0-801f656.zip. Proceeding with unpacking bundle..."
-            unzip DellAutomationPlatform_v1.0.0.0.zip
+            echo "--> ❌ Error: DAP installation zip file not found at ./$DAP_BUNDLE_FILENAME. Proceeding with unpacking bundle..."
+            unzip ${DAP_INSTALL_FILENAME}
+            echo "--> DAP installation bundle unpacked successfully."
         fi
     else
-        echo "--> ❌ Error: DAP installation files not found at ./DellAutomationPlatform_v1.0.0.0.zip. Please ensure the file is present."
+        echo "--> ❌ Error: DAP installation files not found at ./$DAP_INSTALL_FILENAME. Please ensure the file is present."
         exit 1
     fi
 
@@ -287,9 +291,9 @@ else
     else
         echo "--> ❌ Error: Unpacked DAP installation script not found at ./install-upgrade.sh. Proceeding with unpacking..."
         echo "--> Verifying digital signature of the DAP installation package..."
-        openssl dgst -sha384 -verify dell_edgeHZP_30_public.pem -signature DellAutomationPlatform_v1.0.0.0-801f656.zip.signed.bin DellAutomationPlatform_v1.0.0.0-801f656.zip
+        openssl dgst -sha384 -verify dell_public.key -signature $DAP_SIGNED_FILENAME $DAP_BUNDLE_FILENAME
         echo "--> Unpacking DAP installation script..."
-        unzip DellAutomationPlatform_v1.0.0.0-801f656.zip
+        unzip ${DAP_BUNDLE_FILENAME}
         echo "--> Setting execute permissions on installation script..."
         chmod +x ./install-upgrade.sh
         echo "--> Dell Automation Platform installation script unpacked successfully."
@@ -324,10 +328,17 @@ else
     # Integrate the new certificate into the system trust store
     echo "--> Updating CA certificates..."
     update-ca-certificates
+    cat <<EOF > /etc/docker/daemon.json 
+{
+  "insecure-registries" : ["https://$QUAY_SERVER:443"]
+}
+EOF
+    echo "--> Restarting Docker to apply changes..."
+    systemctl restart docker
 fi
 
 echo "Logging in to Quay registry as $QUAY_USER..."
-docker login $QUAY_SERVER --username "$QUAY_USER" --password "$QUAY_PASSWORD"
+docker login https://$QUAY_SERVER:443 --username "$QUAY_USER" --password "$QUAY_PASSWORD"
 
 sudo ./install-upgrade.sh EO_HOST="$DAPO_HOST" \
 IMAGE_REG_URL="$QUAY_SERVER" IMAGE_REG_USERNAME="$QUAY_USER" \
