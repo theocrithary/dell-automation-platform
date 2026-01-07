@@ -20,8 +20,8 @@ This repo has two scripts that automate the full setup of a single-node Kubernet
 - registry.domain
 
 ## Instructions
-- Review and modify the 'user configurable variables' section of both scripts
-- Run the 'k8s_install.sh' script first, then when complete without errors, run the 'dap_install.sh' script
+- Review and modify the 'user configurable variables' section of all 3 scripts
+- Run the scripts in order; '01_k8s_install.sh' script first, then when complete without errors, run the '02_dap_prepare.sh' script, and lastly the final install script 03_dap_install.sh
 
 ## Step 1: 01_k8s_install.sh
 ```
