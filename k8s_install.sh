@@ -262,8 +262,23 @@ else
 fi
 
 # Disable the firewall (UFW) to prevent networking issues within the cluster
-echo "--> Disabling the firewall (ufw)..."
-ufw disable
+if ufw status | grep -q "Status: inactive"; then
+    echo "✅ Success: UFW firewall is already disabled."
+else
+    echo "❌ Failure: UFW firewall is currently active."
+    echo "--> Disabling the firewall (ufw)..."
+    ufw disable
+fi
+
+# Disable cloud-init network configuration to prevent interference with Kubernetes networking
+if [ -f /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg ]; then
+    echo "✅ Success: cloud-init network configuration is already disabled."
+else
+    echo "❌ Failure: cloud-init network configuration is NOT disabled."
+    echo "--> Disabling cloud-init network configuration..."
+    echo -e "network: {config: disabled}" | sudo tee /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
+    sudo netplan apply
+fi
 
 # Check if multipathing is active and disable it if so
 if systemctl is-active "multipathd.service" &>/dev/null; then
