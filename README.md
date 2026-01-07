@@ -23,14 +23,19 @@ This repo has two scripts that automate the full setup of a single-node Kubernet
 - Review and modify the 'user configurable variables' section of both scripts
 - Run the 'k8s_install.sh' script first, then when complete without errors, run the 'dap_install.sh' script
 
-## Step 1: k8s_install.sh
+## Step 1: 01_k8s_install.sh
 ```
-sudo ./k8s_install.sh -U <docker username> -T <docker token>
+sudo ./01_k8s_install.sh -U <docker username> -T <docker token>
 ```
 
-## Step 2: dap_install.sh
+## Step 2: 02_dap_prepare.sh
 ```
-sudo ./dap_install.sh -Q <quay registry username> -q <quay password>
+sudo ./02_dap_prepare.sh -Q <quay registry username> -q <quay password>
+```
+
+## Step 3: 03_dap_install.sh
+```
+sudo ./03_dap_install.sh -Q <quay registry username> -q <quay password>
 ```
 
 

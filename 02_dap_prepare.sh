@@ -10,13 +10,12 @@
 # 2. Installs HAProxy as the ingress controller
 # 3. Installs Metric Server for resource monitoring
 # 4. Prepares DAP installation files
-# 5. Installs Dell Automation Platform
 #
 # IMPORTANT: This script requires root privileges.
 
 # ALSO IMPORTANT: add execute permissions with: sudo chmod +x dap_install.sh
 
-# sudo ./dap_install.sh -Q <quay_user> -q <quay_password>
+# sudo ./02_dap_prepare.sh -Q <quay_user> -q <quay_password>
 
 # ==============================================================================
 
@@ -35,22 +34,13 @@ fi
 
 API_HOST="dap.lab.local"
 QUAY_SERVER="quay.lab.local"
-DAPO_HOST="orchestrator.dap.lab.local"
-PORTAL_HOST="portal.dap.lab.local"
-ORG_NAME="Bahay"
-ORG_DESC="Home Lab"
-FIRST_NAME="Theo"
-LAST_NAME="C"
-DAPO_USERNAME="administrator"
-DAPO_EMAIL="administrator@lab.local"
-DAP_INSTALL_FILENAME="DellAutomationPlatform_v1.1.0.0.zip"
-DAP_BUNDLE_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip"
-DAP_SIGNED_FILENAME="DellAutomationPlatform_v1.1.0.0-3e66966.zip.signed.bin"
 
 # ================================
-# Parse Docker Hub credentials (required to avoid unauthenticated pull rate limits)
-# You can provide DOCKER_USER and DOCKER_TOKEN as environment variables or
-# pass them as flags to the script: -U <user> -T <token>
+# Parse registry credentials
+# ================================
+# pass them as flags to the script: -Q <user> -q <password>
+# or set them as environment variables: QUAY_USER and QUAY_PASSWORD
+
 while getopts "Q:q:" opt; do
   case $opt in
     Q) PARSE_QUAY_USER="$OPTARG";;
@@ -301,11 +291,11 @@ else
 fi
 
 
-# ==============================================
-# 5. Install Dell Automation Platform
-# ==============================================
-log_section_start "Installing Dell Automation Platform"
-echo "--> Starting Dell Automation Platform installation..."
+# ==================================================================
+# 5. Preparing for Dell Automation Platform installation
+# ==================================================================
+log_section_start "Preparing for Dell Automation Platform installation"
+echo "--> Starting Dell Automation Platform preparation..."
 
 echo "--> Checking for registry certificate file..."
 if [ -f ./$QUAY_SERVER.crt ]; then
@@ -340,10 +330,5 @@ fi
 echo "Logging in to Quay registry as $QUAY_USER..."
 docker login https://$QUAY_SERVER:443 --username "$QUAY_USER" --password "$QUAY_PASSWORD"
 
-sudo ./install-upgrade.sh EO_HOST="$DAPO_HOST" \
-IMAGE_REG_URL="$QUAY_SERVER" IMAGE_REG_USERNAME="$QUAY_USER" \
-IMAGE_REG_PASSWORD="$QUAY_PASSWORD" REGISTRY_CERT_FILE_PATH="./$QUAY_SERVER.crt" \
-NAMESPACE="dapo" PORTAL_NAMESPACE="dapp" PORTAL_COOKIE_DOMAIN="$API_HOST" \
-PORTAL_INGRESS_CLASS_NAME="haproxy" PORTAL_HOST="$PORTAL_HOST" \
-ORG_NAME="$ORG_NAME" ORG_DESC="$ORG_DESC" FIRST_NAME="$FIRST_NAME" LAST_NAME="$LAST_NAME" \
-USERNAME="$DAPO_USERNAME" EMAIL="$DAPO_EMAIL"
+echo "--> Now ready for DAP installation ..."
+echo "--> Proceed to step 3 and run the 03_dap_install.sh script to install Dell Automation Platform."
