@@ -55,6 +55,7 @@ KUBE_VERSION="1.32" # This is used for the kubeadm/kubelet/kubectl apt repo vers
 KUBE_VERSION_LONG="1.32.8" # Full Kubernetes version to install during kubeadm init
 CNI_VERSION="v1.5.1" # CNI plugins version
 API_HOST="dap.lab.local"
+DNS_SERVERS="192.168.0.53 8.8.8.8"
 
 # Load balancer pool, for a single node k8s, you can use the host's IP with /32 mask
 METALLB_IP="192.168.0.25/32"
@@ -278,6 +279,18 @@ else
     echo "--> Disabling cloud-init network configuration..."
     echo -e "network: {config: disabled}" | sudo tee /etc/cloud/cloud.cfg.d/99-disable-network-config.cfg
     sudo netplan apply
+fi
+
+# Check if DNS is configured correctly
+echo "--> Checking DNS configuration..."
+if grep -q "DNS=$DNS_SERVERS" /etc/systemd/resolved.conf; then
+    echo "✅ Success: DNS nameserver is configured."
+else
+    echo "❌ Failure: DNS nameserver is NOT configured."
+    echo "--> Configuring DNS nameserver..."
+    echo "DNS=$DNS_SERVERS" | sudo tee -a /etc/systemd/resolved.conf
+    echo "Domains=~." | sudo tee -a /etc/systemd/resolved.conf
+    systemctl restart systemd-resolved
 fi
 
 # Check if multipathing is active and disable it if so
