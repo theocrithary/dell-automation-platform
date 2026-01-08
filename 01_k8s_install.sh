@@ -597,45 +597,49 @@ else
     usermod -aG docker $SUDO_USER
     # Restart Docker to apply group changes
     systemctl restart docker
+fi
 
-    echo "--> Checking Containerd configuration..."
-    if SystemdCgroup=$(grep -Po '(?<=SystemdCgroup = )\w+' /etc/containerd/config.toml); [ "$SystemdCgroup" = "true" ]; then
-        echo "✅ Success: containerd is already configured to use systemd cgroup driver."
-    else
-        echo "❌ Failure: containerd is NOT configured to use systemd cgroup driver."
-        echo "--> Configuring containerd to use systemd cgroup driver..."
-        sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
-        systemctl restart containerd
-    fi
+# Verify Docker cgroup driver matches kubelet and containerd (systemd)
+echo "--> Checking Containerd configuration..."
+if SystemdCgroup=$(grep -Po '(?<=SystemdCgroup = )\w+' /etc/containerd/config.toml); [ "$SystemdCgroup" = "true" ]; then
+    echo "✅ Success: containerd is already configured to use systemd cgroup driver."
+else
+    echo "❌ Failure: containerd is NOT configured to use systemd cgroup driver."
+    echo "--> Configuring containerd to use systemd cgroup driver..."
+    sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+    systemctl restart containerd
+fi
 
-    echo "--> Checking kubelet config.yaml cgroup driver..."
-    if sed -n 's/.*cgroupDriver: //p' /var/lib/kubelet/config.yaml | grep -q "systemd"; then
-        echo "✅ Success: kubelet config.yaml is using systemd cgroup driver."
-    else
-        echo "❌ Failure: kubelet config.yaml is NOT using systemd cgroup driver."
-        echo "--> Configuring kubelet config.yaml to use systemd cgroup driver..."
-        sed -i 's/cgroupDriver: .*/cgroupDriver: systemd/' /var/lib/kubelet/config.yaml
-        echo "--> Restarting kubelet to pick up cgroup driver changes..."
-        systemctl restart kubelet
-        sleep 5 # Wait a moment for kubelet to restart
-    fi
+echo "--> Checking kubelet config.yaml cgroup driver..."
+if sed -n 's/.*cgroupDriver: //p' /var/lib/kubelet/config.yaml | grep -q "systemd"; then
+    echo "✅ Success: kubelet config.yaml is using systemd cgroup driver."
+else
+    echo "❌ Failure: kubelet config.yaml is NOT using systemd cgroup driver."
+    echo "--> Configuring kubelet config.yaml to use systemd cgroup driver..."
+    sed -i 's/cgroupDriver: .*/cgroupDriver: systemd/' /var/lib/kubelet/config.yaml
+    echo "--> Restarting kubelet to pick up cgroup driver changes..."
+    systemctl restart kubelet
+    sleep 5 # Wait a moment for kubelet to restart
+fi
 
-    echo "--> Checking Docker cgroup driver..."
-    if docker info --format '{{.CgroupDriver}}' | grep -q "systemd"; then
-        echo "✅ Success: Docker is using systemd cgroup driver."
-    else
-        echo "❌ Failure: Docker is NOT using systemd cgroup driver. Current: $(docker info --format '{{.CgroupDriver}}')"
-        echo "--> Configuring Docker to use systemd cgroup driver..."
-        cat <<EOF > /etc/docker/daemon.json
+# Verify Docker cgroup driver
+echo "--> Checking Docker cgroup driver..."
+if docker info --format '{{.CgroupDriver}}' | grep -q "systemd"; then
+    echo "✅ Success: Docker is using systemd cgroup driver."
+else
+    echo "❌ Failure: Docker is NOT using systemd cgroup driver. Current: $(docker info --format '{{.CgroupDriver}}')"
+    echo "--> Configuring Docker to use systemd cgroup driver..."
+    cat <<EOF > /etc/docker/daemon.json
 {
   "exec-opts": ["native.cgroupdriver=systemd"]
 }
 EOF
-        echo "--> Restarting Docker to pick up cgroup driver changes..."
-        systemctl restart docker
-        sleep 5 # Wait a moment for Docker to restart
-    fi
+    echo "--> Restarting Docker to pick up cgroup driver changes..."
+    systemctl restart docker
+    sleep 5 # Wait a moment for Docker to restart
+fi
 
+# Verify MaxPods setting for kubelet
     echo "--> Increase MaxPods setting for kubelet..."
     MaxPods=$(kubectl describe node $(kubectl get nodes -o custom-columns=NAME:.metadata.name --no-headers) | grep -A 1 'pods:' | grep -i "pods" | awk '{print $2}' | head -n 1 )
     if [[ "$MaxPods" = "250" ]]; then
@@ -649,48 +653,46 @@ EOF
         sleep 5 # Wait a moment for kubelet to restart
     fi
     
-    # Verify Docker is running
-    if systemctl is-active --quiet docker; then
-        echo "✅ Success: Docker Engine started successfully."
+# Verify Docker is running
+if systemctl is-active --quiet docker; then
+    echo "✅ Success: Docker Engine started successfully."
+else
+    echo "❌ Failure: Docker Engine failed to start. Please check the service status."
+    exit 1
+fi
+echo "--> Docker is running."
+echo "--> Docker version:"
+docker --version
+
+# Verify Kubelet is running after Docker installation
+echo "--> Verifying Kubelet status after Docker installation..."
+if systemctl is-active --quiet kubelet; then
+    echo "✅ Success: Kubelet is running."
+else
+    echo "❌ Failure: Kubelet is NOT running. Attempting to start it..."
+    systemctl start kubelet
+    if systemctl is-active --quiet kubelet; then
+        echo "✅ Success: Kubelet started successfully."
     else
-        echo "❌ Failure: Docker Engine failed to start. Please check the service status."
+        echo "❌ Failure: Kubelet failed to start. Please check the service status."
         exit 1
     fi
-    echo "--> Docker is running."
-    echo "--> Docker version:"
-    docker --version
-
-    # Verify Kubelet is running after Docker installation
-    echo "--> Verifying Kubelet status after Docker installation..."
-    if systemctl is-active --quiet kubelet; then
-        echo "✅ Success: Kubelet is running."
-    else
-        echo "❌ Failure: Kubelet is NOT running. Attempting to start it..."
-        systemctl start kubelet
-        if systemctl is-active --quiet kubelet; then
-            echo "✅ Success: Kubelet started successfully."
-        else
-            echo "❌ Failure: Kubelet failed to start. Please check the service status."
-            exit 1
-        fi
-    fi
-    echo "--> Kubelet is running."
-
-    # Verify Kubernetes components are running after Docker installation
-    echo "--> Verifying Kubernetes components status after Docker installation..."
-    START_TIME=$(date +%s)  
-
-    until kubectl get nodes --no-headers | awk '{if ($2 != "Ready") exit 1}'; do
-      CURRENT_TIME=$(date +%s)
-      ELAPSED=$((CURRENT_TIME - START_TIME))
-      MINUTES=$((ELAPSED / 60))
-      SECONDS=$((ELAPSED % 60))
-      echo "Still waiting for control plane to be Ready... elapsed time: ${MINUTES}m ${SECONDS}s"
-      sleep 15
-    done
-    echo "--> Control plane is Ready after ${MINUTES}m ${SECONDS}s."
-
 fi
+echo "--> Kubelet is running."
+
+# Verify Kubernetes components are running after Docker installation
+echo "--> Verifying Kubernetes components status after Docker installation..."
+START_TIME=$(date +%s)  
+
+until kubectl get nodes --no-headers | awk '{if ($2 != "Ready") exit 1}'; do
+  CURRENT_TIME=$(date +%s)
+  ELAPSED=$((CURRENT_TIME - START_TIME))
+  MINUTES=$((ELAPSED / 60))
+  SECONDS=$((ELAPSED % 60))
+  echo "Still waiting for control plane to be Ready... elapsed time: ${MINUTES}m ${SECONDS}s"
+  sleep 15
+done
+echo "--> Control plane is Ready after ${MINUTES}m ${SECONDS}s."
 
 # Perform Docker CLI login so Docker client has authenticated access (helps with pulls)
 if command -v docker >/dev/null 2>&1; then
