@@ -647,7 +647,11 @@ fi
     else
         echo "❌ Failure: kubelet maxPods is set to $MaxPods."
         echo "--> Setting kubelet maxPods to 250..."
-        sed -i 's/maxPods: .*/maxPods: 250/' /var/lib/kubelet/config.yaml
+        if grep -q "maxPods:" /var/lib/kubelet/config.yaml; then
+          sed -i 's/maxPods: .*/maxPods: 250/' /var/lib/kubelet/config.yaml
+        else
+          echo "maxPods: 250" >> /var/lib/kubelet/config.yaml
+        fi
         echo "--> Restarting kubelet to pick up maxPods changes..."
         systemctl restart kubelet
         sleep 5 # Wait a moment for kubelet to restart
